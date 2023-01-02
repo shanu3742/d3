@@ -1,0 +1,241 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+      * {
+        margin: 0%;
+        padding: 0%;
+      }
+    </style>
+  </head>
+  <body></body>
+
+  <script>
+    // console.log(typeof d3);
+
+    let dataPoint = [
+      {
+        name: "shanu",
+        age: 22,
+      },
+
+      {
+        name: "rah",
+        age: 9,
+      },
+      {
+        name: "rahul",
+        age: 50,
+      },
+
+      {
+        name: "virat",
+        age: 31,
+      },
+      {
+        name: "rohit",
+        age: 21,
+      },
+    ];
+
+    console.log(dataPoint);
+
+    //data manipulation goes here
+    let scaleY;
+    const dataPattern = (_) => {
+      let age_array = dataPoint.map((e) => e.age);
+      let name_array = dataPoint.map((e) => e.name);
+      let margin = { top: 20, bottom: 30, left: 40, right: 60 };
+      let svgContainerWidth = window.innerWidth - margin.left - margin.right;
+      let svgContainerHeight = window.innerHeight - margin.top - margin.bottom;
+
+      //   y-scale data-manipulation
+      let yDomain = [d3.max(age_array), 0];
+      let yRange = [0, svgContainerHeight - margin.top - margin.bottom];
+
+      //x- scale data manipulation
+
+      let xRange = [0, svgContainerWidth - margin.left - margin.right];
+
+      scaleY = d3.scaleLinear().domain(yDomain).range(yRange);
+
+      scaleX = d3
+        .scalePoint()
+        .domain(name_array)
+        .range([100, 800])
+        .range(xRange);
+
+      let xOneThershold = scaleX(name_array[0]);
+      let xTwoThreshold = scaleX(name_array[name_array.length - 1]);
+      let yOneThreshold = scaleY(
+        age_array.reduce((a, b) => a + b) / age_array.length
+      );
+      let yTwoThreshold = yOneThreshold;
+
+      return dataPoint.map((el, i) => {
+        return {
+          ...el,
+          yDomain,
+          yRange,
+          xDomain: name_array,
+          xRange,
+          margin,
+          svgContainerHeight,
+          svgContainerWidth,
+          x: scaleX(el.name),
+          y: scaleY(el.age),
+          xOneThershold,
+          xTwoThreshold,
+          yOneThreshold,
+          yTwoThreshold,
+        };
+      });
+    };
+
+    let graphData = dataPattern(dataPoint);
+
+    console.log(graphData);
+
+    let svg = d3
+      .select("body")
+      .append("svg")
+      .attr("height", graphData[0].svgContainerHeight)
+      .attr("width", graphData[0].svgContainerWidth);
+
+    //is used to group our graph
+
+    let g = svg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${graphData[0].margin.left},${graphData[0].margin.top})`
+      );
+
+    //draw y-axis
+
+    // console.log(scaleY(10));
+    // (832/32)*10=260
+    let axisLeft = d3.axisLeft(scaleY);
+
+    g.append("g").attr("class", "y-axis").call(axisLeft);
+
+    let axisBottom = d3.axisBottom(scaleX).ticks(graphData.length);
+    g.append("g")
+      .append("g")
+      .attr("transform", `translate(${0},${scaleY(0)})`)
+      .attr("class", "x-axis")
+      .call(axisBottom);
+
+    // console.log(scaleX("shanu"));
+
+    // line generator
+
+    let path = g
+      .append("path")
+      .datum(graphData)
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 1.5)
+      .attr(
+        "d",
+        d3
+          .line()
+          .x((d) => d.x)
+          .y((d) => d.y)
+      );
+
+    g.append("g")
+      .append("line")
+      .attr("x1", graphData[0].xOneThershold)
+      .attr("x2", graphData[0].xTwoThreshold)
+      .attr("y1", graphData[0].yOneThreshold)
+      .attr("y2", graphData[0].yTwoThreshold)
+      .attr("stroke", "red");
+
+    let evenPointOnPath = d3.range(101).filter((el) => el % 2 === 0);
+    let oddPontOnPath = d3.range(101).filter((el) => el % 3 === 0);
+
+    // console.log(arrayofPath);
+    // console.log(path.node().getPointAtLength(10));
+
+    // get x-point at all even point
+
+    // var pathLength = Math.floor(path.getTotalLength());
+
+    // console.log(pathLength);
+
+    //draw line above threshold betwwen threshold and path
+
+    // let colorRange = d3.range(graphData.length);
+    let length = 0;
+    path.each(function (d) {
+      d.totalLength = this.getTotalLength();
+      length = d.totalLength;
+    });
+
+    console.log(length);
+
+    // for (let i = 0; i < xPoint.length; i++) {
+    //   g.append("g")
+    //     .append("line")
+    //     .attr("x1", xPoint[i].x)
+    //     .attr("x2", xPoint[i].x)
+    //     .attr("y1", xPoint[i].y)
+    //     .attr("y2", graphData[0].yOneThreshold)
+    //     .attr("stroke", "red");
+    // }
+
+    let xPoint = [];
+
+    for (let i = 0; i < evenPointOnPath.length; i++) {
+      prcnt = (evenPointOnPath[i] * length) / 100;
+      xPoint.push(path.node().getPointAtLength(prcnt));
+    }
+
+    console.log(xPoint);
+
+    for (let i = 0; i < xPoint.length; i++) {
+      g.append("g")
+        .append("line")
+        .attr("x1", xPoint[i].x)
+        .attr("x2", xPoint[i].x)
+        .attr("y1", xPoint[i].y)
+        .attr("y2", graphData[0].yOneThreshold)
+        .attr("stroke", "red");
+    }
+
+    let evenPoint = [];
+
+    for (let i = 0; i < oddPontOnPath.length; i++) {
+      prcnt = (oddPontOnPath[i] * length) / 100;
+      evenPoint.push(path.node().getPointAtLength(prcnt));
+    }
+
+    console.log(evenPoint);
+
+    for (let i = 0; i < evenPoint.length; i++) {
+      if (graphData[0].yOneThreshold < evenPoint[i].y) {
+        g.append("g")
+          .append("line")
+          .attr("x1", evenPoint[i].x)
+          .attr("x2", evenPoint[i].x)
+          .attr("y2", evenPoint[i].y)
+          .attr("y1", scaleY(0))
+          .attr("stroke", "green");
+      } else {
+        g.append("g")
+          .append("line")
+          .attr("x1", evenPoint[i].x)
+          .attr("x2", evenPoint[i].x)
+          .attr("y2", graphData[0].yOneThreshold)
+          .attr("y1", scaleY(0))
+          .attr("stroke", "green");
+      }
+    }
+  </script>
+</html>
